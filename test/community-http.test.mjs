@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { createHub } from '../server/hub.mjs';
+
+test('clean package serves complete UI without Codex; setup requires same origin and preserves a conflicting skill', async t => {
+  const root=await mkdtemp(join(tmpdir(),'tongzhou-public-http-'));
+  const directory=join(root,'data'),home=join(root,'home');
+  const hub=await createHub({directory,port:0,setupOptions:{home,resolveCli:()=>'/mock/codex',runCommand:async()=>({stdout:'hidden'})}});
+  t.after(async()=>{await hub.close();await rm(root,{recursive:true,force:true});});
+  const get=async path=>(await fetch(hub.url+path)).json();
+  const health=await get('/api/health');
+  assert.equal(health.app,'codex-dsh-bridge'); assert.equal(health.dataDir,directory);
+  assert.equal(health.buildId,'tongzhou-community-0.3.0');
+  const html=await (await fetch(hub.url)).text();
+  assert.match(html,/接入本机 Codex/);assert.match(html,/\/setup.js/);
+  for (const path of ['/setup.js','/app.js','/style.css','/tasks.js','/reading','/reading.js','/reading-format.js','/reading.css']) assert.equal((await fetch(hub.url+path)).status,200,path);
+  assert.equal((await get('/api/conversations')).conversations.length,1);
+  const setup=await get('/api/setup');assert.equal(setup.skill.installed,false);
+  const post=origin=>fetch(hub.url+'/api/setup/codex-install',{method:'POST',headers:{origin,'content-type':'application/json'},body:'{}'});
+  assert.equal((await post('https://other.invalid')).status,403);
+  assert.equal((await get('/api/setup')).skill.installed,false);
+  const installed=await post(hub.url);assert.equal(installed.status,200);
+  const value=await installed.json();assert.equal(value.skill.installed,true);
+  const skill=join(home,'.agents/skills/tongzhou-collaboration/SKILL.md');
+  assert.match(await readFile(skill,'utf8'),/tongzhou-collaboration/);
+  await writeFile(skill,'local customization');
+  assert.equal((await post(hub.url)).status,409);
+  assert.equal(await readFile(skill,'utf8'),'local customization');
+});

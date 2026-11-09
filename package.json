@@ -1,0 +1,83 @@
+{
+  "name": "dsh-codex-bridge",
+  "version": "0.3.0",
+  "description": "同舟 / Tongzhou: local, named Codex–DSH collaboration with a shared readable history.",
+  "license": "MIT",
+  "author": "PhoenixQian",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "tongzhou": "./skills/tongzhou-collaboration/scripts/tongzhou.mjs"
+  },
+  "files": [
+    "lib",
+    "client",
+    "server",
+    "skills",
+    "cordis.patch.yml",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24.9.0",
+    "dsh": "0.2.2-rc.1"
+  },
+  "os": [
+    "darwin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhoenixQian/dsh-codex-bridge.git"
+  },
+  "homepage": "https://github.com/PhoenixQian/dsh-codex-bridge#readme",
+  "bugs": {
+    "url": "https://github.com/PhoenixQian/dsh-codex-bridge/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "codex",
+    "tongzhou",
+    "collaboration"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-connection"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs tests/*.test.mjs",
+    "check": "node --check lib/index.js && node --check client/client.js && npm test",
+    "pack:check": "npm pack --dry-run --json --ignore-scripts"
+  }
+}

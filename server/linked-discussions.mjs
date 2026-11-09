@@ -1,0 +1,23 @@
+import {randomUUID} from 'node:crypto';
+/** Admission owns a dedicated read-only native identity; task workers are never borrowed. */
+export class LinkedDiscussions {
+  constructor({runtime,onChange}){this.runtime=runtime;this.onChange=onChange;this.active=new Map();this.admissions=new Set();this.edges=new Map();this.receipts=new Map();}
+  reaches(from,to,visited=new Set()){if(from===to)return true;if(visited.has(from))return false;visited.add(from);return [...(this.edges.get(from)??[])].some(next=>this.reaches(next,to,visited));}
+  async request(request,context={}){const {taskId,roundId,targetAgent,title,question,callId}=request;const agent=context.sourceAgent??request.agent;
+    if(!taskId||!callId||!['Codex','DSH'].includes(agent)||!['Codex','DSH'].includes(targetAgent)||typeof question!=='string'||!question.trim())return {status:'invalid'};
+    const receiptKey=taskId+':'+callId;if(this.receipts.has(receiptKey))return this.receipts.get(receiptKey);
+    const seconds=request.timeoutSeconds??1800;if(!Number.isFinite(seconds)||seconds<=0||seconds>86400)return {status:'invalid_timeout'};
+    const source=taskId+':'+agent,target=taskId+':'+targetAgent;
+    if(source===target||this.reaches(target,source))return {status:'cycle_refused'};
+    const key=taskId+':'+targetAgent;let entry=this.active.get(key);
+    if(!entry){if(this.admissions.has(key))return {status:'busy'};this.admissions.add(key);let admissionId;try{
+      const id=admissionId='linked-'+randomUUID();const selected=await this.runtime.configuration({models:context.models,efforts:context.efforts});const configuration={turnTimeoutMs:Math.ceil(seconds*1000),...selected};
+      const signal=context.signal;if(signal?.aborted)return {status:'interrupted'};
+      let actor;const controller=new AbortController();let timer;const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});try{actor=await Promise.race([this.runtime.prepare(id,targetAgent,controller.signal,configuration),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Object.assign(new Error('Member preparation timed out'),{code:'offline'}));},10000);})]);}catch(error){return {status:signal?.aborted?'interrupted':error.code==='MEMBER_BUSY'?'busy':'offline',reason:error.message};}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}if(actor.busy)return {status:'busy'};const deadline=Date.now()+seconds*1000;configuration.discussionDeadline=deadline;
+      await this.runtime.store.create({id,title:title?.trim()||'任务关联讨论',originTaskId:taskId,originRoundId:roundId,originToolCallId:callId,sourceAgent:agent,sharedContext:context.sharedContext??'',linkedQuestion:question,...configuration});await this.runtime.configure(id,{...configuration,leadAgent:agent,supportAgents:[targetAgent]});await this.runtime.store.append(id,{id:'source-'+callId,kind:'event',from:{name:agent,...(request.sourceThreadId?{agentId:request.sourceThreadId}:{})},text:question,origin:{kind:'task-discussion-tool',taskId,roundId,callId,agent,sourceThreadId:request.sourceThreadId??null}});entry={id,deadline};this.active.set(key,entry);
+      await this.onChange?.({type:'discussion-linked',taskId,roundId,agent,callId,discussionId:id,url:'/?conversation='+id});
+      await this.runtime.start(id,{question,initialAgent:targetAgent});entry.done=this.runtime.wait(id).finally(()=>{if(this.active.get(key)===entry)this.active.delete(key);});
+    }finally{this.admissions.delete(key);if(!entry&&admissionId)await this.runtime.closeActors(admissionId);}}
+    this.edges.set(source,new Set([...(this.edges.get(source)??[]),target]));const base={discussionId:entry.id,url:'/?conversation='+entry.id,deadline:entry.deadline};let timer,abort;try{await context.onWait?.(true);const result=await Promise.race([entry.done.then(detail=>{const last=[...detail.messages].reverse().find(m=>m.kind==='agent');return {...base,status:detail.conversation.status==='completed'?'completed':detail.conversation.status,text:last?.text??'',memoryCapability:detail.conversation.memoryCapability};}),new Promise(resolve=>{timer=setTimeout(()=>resolve({...base,status:'timeout'}),Math.max(0,entry.deadline-Date.now()));abort=()=>resolve({...base,status:'interrupted'});context.signal?.addEventListener('abort',abort,{once:true});if(context.signal?.aborted)abort();})]);this.receipts.set(receiptKey,result);await this.onChange?.({type:'discussion-wait-ended',taskId,roundId,agent,callId,...result});return result;}finally{clearTimeout(timer);context.signal?.removeEventListener('abort',abort);this.edges.get(source)?.delete(target);await context.onWait?.(false);}
+  }
+}

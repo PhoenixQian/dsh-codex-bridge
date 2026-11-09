@@ -1,0 +1,16 @@
+node_modules/
+*.tgz
+.DS_Store
+coverage/
+.env
+.env.*
+# Runtime belongs in the user's separate data directory.
+web-service.json
+web-service.log
+connection-settings.json
+dsh-*-state.json
+dsh-host-lanes.json
+dsh-reading-sessions.json
+discussion-workspace/
+*.sqlite*
+*.jsonl*

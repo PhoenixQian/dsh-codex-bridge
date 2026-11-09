@@ -1,0 +1,6 @@
+interface:
+  display_name: "同舟协作"
+  short_description: "通过本机同舟与 DSH 讨论、复核和协作，读取具名回复并保留可查看记录"
+  default_prompt: "使用 $tongzhou-collaboration 与 DSH 通过同舟讨论当前问题并汇总真实回复。"
+policy:
+  allow_implicit_invocation: true

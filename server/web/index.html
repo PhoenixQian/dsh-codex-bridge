@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>同舟｜讨论与任务</title>
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/tasks.js" defer></script><script src="/setup.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="conversations" id="sidebar">
+      <div class="brand"><span class="brand-mark">↔</span><div><strong>同舟</strong><small>Codex与DSH的共享记录</small></div><button id="close-sidebar" class="icon-button" aria-label="收起列表">×</button></div>
+      <div class="workspace-tabs" aria-label="工作入口"><button id="show-discussions" aria-pressed="true">讨论</button><button id="show-tasks" aria-pressed="false">任务</button></div>
+      <div id="discussion-browser">
+      <button class="new-button" id="new-conversation">＋ 新建议题</button>
+      <div class="section-label">会话列表 <span id="conversation-count">0</span></div>
+      <label><input type="checkbox" id="conversation-archived">归档记录</label><nav id="conversation-list" aria-label="会话列表"></nav><button id="more-conversations" class="quiet-button" hidden>显示更多</button>
+      </div>
+      <div id="task-browser" hidden>
+        <button class="new-button" id="new-task">＋ 发布任务</button>
+        <div class="section-label">任务列表 <span id="task-count">0</span></div>
+        <label><input type="checkbox" id="tasks-archived">归档记录</label><nav id="task-list" aria-label="任务列表"></nav><button id="more-tasks" class="quiet-button" hidden>显示更多</button>
+      </div>
+      <button id="open-setup" class="quiet-button setup-entry">接入本机 Codex</button>
+      <div class="sidebar-bottom"><span class="status-dot" id="service-dot"></span><span id="service-state">正在连接本机服务</span></div>
+    </aside>
+    <button id="sidebar-backdrop" class="sidebar-backdrop" aria-label="关闭列表" tabindex="-1"></button>
+    <main id="discussion-page">
+      <header class="conversation-header">
+        <button id="toggle-sidebar" class="icon-button" aria-label="收起会话列表" aria-controls="sidebar" aria-expanded="true">☰</button>
+        <div class="heading"><h1 id="conversation-title">正在载入会话</h1><p id="conversation-status">读取记录中</p></div>
+        <button class="quiet-button" id="copy-link">复制链接</button>
+      </header>
+      <details id="discussion-details" class="discussion-details">
+        <summary>会话详情与说明</summary>
+        <div class="discussion-details-content">
+          <div class="eyebrow">AGENT TO AGENT · 本机共享</div>
+          <a id="origin-task" class="quiet-button" hidden>返回任务</a>
+          <div class="participants" id="participants"></div>
+          <div id="discussion-brief" class="notice"></div>
+          <p id="budget">默认100个往返名额，可提前结束</p>
+          <div class="notice">双方消息按真实Agent身份记录。讨论结果等待你审阅。外部来信会唤醒独立Codex桥接会话；已唤醒不代表回复已送达真实DSH。</div>
+        </div>
+      </details>
+      <div class="error-banner" id="error-banner" hidden></div>
+      <section class="transcript" id="transcript" aria-label="会话消息" aria-live="polite"></section>
+      <footer class="review-panel">
+        <div class="discussion-actions" aria-label="讨论操作"><button class="primary-button" id="start-discussion">开始讨论</button><button class="quiet-button incoming-button" id="reply-incoming" disabled>回复来信</button><button class="quiet-button" id="pause-discussion" disabled>暂停后续回复</button><button id="archive-conversation" class="quiet-button">归档</button></div>
+        <label for="review-text" class="visually-hidden">补充要求 / 审阅意见</label>
+        <div class="review-compose"><textarea id="review-text" rows="2" wrap="soft" aria-describedby="review-help" placeholder="补充要求、问题或审阅意见…"></textarea><div class="composer-actions"><button id="send-conversation-message" class="primary-button">发送给主Agent</button><button id="save-review" class="quiet-button">仅记录意见</button></div></div>
+        <div class="review-hint"><span id="review-help">发送由主Agent处理；记录意见仅保存。</span><span id="feedback" role="status"></span></div>
+      </footer>
+    </main>
+    <main id="tasks-page" hidden>
+      <header class="conversation-header">
+        <button id="toggle-task-sidebar" class="icon-button" aria-label="收起任务列表" aria-controls="sidebar" aria-expanded="true">☰</button>
+        <div class="heading"><div class="eyebrow">CODEX × DSH · 专用执行会话</div><h1>任务工作台</h1><p>发布范围、查看分工、验收真实交付物</p></div>
+      </header>
+      <div class="notice task-notice">任务在专用工作目录与原生执行会话中运行，不会唤醒当前Codex主聊天。讨论、审阅意见与任务执行分别授权。</div>
+      <nav id="pending-approval-tasks" class="participants" aria-label="待你确认"></nav><div class="task-content">
+        <div id="task-empty" class="empty-state"><div class="symbol">↗</div><strong>从一份明确的任务开始</strong><p>在左侧点击“发布任务”，填写目标、输入路径和验收标准。可以先保存草稿，发布后才会执行。</p></div>
+        <article id="task-detail" hidden>
+          <div class="task-detail-heading"><h2 id="task-detail-title">任务详情</h2><span id="task-detail-status" class="task-status-label"></span></div>
+          <div class="task-action-bar"><button class="primary-button" id="start-task" disabled>执行草稿</button><button class="quiet-button" id="cancel-task" disabled>取消执行</button><button class="quiet-button" id="resume-task" disabled>检查并恢复</button><button id="archive-task" class="quiet-button">归档</button><a class="quiet-button task-export" id="task-export" download>导出只读记录</a></div>
+          <div id="task-members" class="participants"></div><div id="task-approvals" aria-live="polite"></div><div id="task-linked-discussions"></div><div id="task-error" class="task-error" role="alert" hidden></div>
+<section class="task-panel"><h3>已发布交付物</h3><div id="task-artifacts" class="task-artifacts"></div></section><section class="task-panel"><h3>执行总结与未完成项</h3><div id="task-summary"></div></section><section class="task-panel"><h3>群聊与实际动作</h3><div id="task-events" class="task-events"></div></section><details class="task-metadata"><summary>范围、设置、分工与核验详情</summary>          <section class="task-panel"><h3>任务目标</h3><div id="task-goal"></div></section>
+          <div class="task-two-columns"><section class="task-panel"><h3>输入与执行范围</h3><div id="task-scope"></div></section><section class="task-panel"><h3>模型、预算与实际用量</h3><div id="task-models"></div><label>每位Agent回复额度 <input id="existing-task-reply-limit" type="number" min="1" max="100000" step="1"></label><button id="save-task-reply-limit" type="button">保存回复额度</button><small>保存仅调整额度；点击继续或发送补充后执行。</small></section></div>
+          <section class="task-panel"><h3>两侧分工</h3><div id="task-assignments" class="task-assignments"></div></section>
+          <div class="task-two-columns"><section class="task-panel"><h3>执行进度</h3><div id="task-progress" aria-live="polite"></div></section><section class="task-panel"><h3>原生执行身份</h3><div id="task-identities"></div></section></div>
+
+          <div class="task-two-columns"><section class="task-panel"><h3>验收标准</h3><div id="task-acceptance"></div></section><section class="task-panel"><h3>系统检查与用户验收</h3><div id="task-validation"></div></section></div>
+
+
+</details>        </article>
+      </div>
+      <footer class="review-panel"><div class="review-compose"><textarea id="task-message-input" rows="2" placeholder="继续提出要求；本轮结束后仍可在同一任务续聊。"></textarea><button id="task-template" class="quiet-button">任务模板</button><button id="send-task-message" class="primary-button" disabled>发送</button></div></footer><div class="task-feedback" id="task-feedback" role="status"></div>
+    </main>
+  </div>
+  <dialog id="new-dialog"><form id="new-form"><h2>新建一个讨论议题</h2><p>先建立记录，点击开始讨论后才调用Agent。</p><label>主Agent<select id="discussion-lead-agent"><option value="Codex">Codex</option><option value="DSH">DSH</option></select></label><label>往返名额<input id="discussion-limit" type="number" min="100" value="100"></label><label>Codex模型<select id="discussion-codex-model" disabled></select></label><label>思考程度<select id="discussion-codex-effort" disabled></select></label><label>DSH模型<select id="discussion-dsh-model" disabled></select></label><label>思考程度<select id="discussion-dsh-effort" disabled></select></label><input id="new-title" maxlength="120" placeholder="例如：方案的交叉审阅" required><div class="dialog-actions"><button type="button" class="quiet-button" id="cancel-new">取消</button><button type="submit" class="primary-button">建立议题</button></div></form></dialog>
+  <dialog id="task-dialog" class="task-dialog">
+    <form id="task-form">
+      <h2>发布一项任务</h2><p>保存草稿不会启动模型。点击“发布并执行”授权两侧在以下范围内完成常规任务操作，输出默认进入专用任务目录。</p>
+      <div class="task-form-grid"><div class="task-field"><label>主Agent</label><select id="task-lead-agent"><option value="Codex">Codex</option><option value="DSH">DSH</option></select></div><div class="task-field"><label>输入方式</label><select id="task-input-mode"><option value="materials">按材料核验</option><option value="draft">仅按目标起草</option></select></div><div class="task-field"><label>每位Agent回复额度</label><input id="task-reply-limit" type="number" min="200" value="200"></div><div class="task-field"><label>讨论往返名额</label><input id="task-discussion-limit" type="number" min="100" value="100"></div><div class="task-field"><label>讨论等待秒数</label><input id="task-discussion-timeout" type="number" min="1" value="1800"></div><div class="task-field"><label>CODEX思考程度（原生支持）</label><select id="task-codex-effort" disabled><option value="">未提供可选档位</option></select></div><div class="task-field"><label>DSH思考程度（原生支持）</label><select id="task-dsh-effort" disabled><option value="">未提供可选档位</option></select></div>
+        <div class="task-field full"><label for="task-title-input">任务标题</label><input id="task-title-input" maxlength="120" placeholder="例如：核对数据并制作结果图" required></div>
+        <div class="task-field full"><label for="task-goal-input">目标与要求</label><textarea id="task-goal-input" rows="3" placeholder="说明要完成的工作、两侧需要核对的重点和交付内容" required></textarea></div>
+        <div class="task-field"><label for="task-inputs-input">输入路径（每行一个）</label><textarea id="task-inputs-input" rows="3" placeholder="/绝对路径/源文件.md&#10;/绝对路径/数据.csv"></textarea><small>只提供本任务所需的文件或目录。</small></div>
+        <div class="task-field"><label for="task-output-input">交付目录（可选）</label><input id="task-output-input" placeholder="留空，由服务生成专用目录"><small>服务校验输出范围；已有内容不会静默覆盖。</small></div>
+        <div class="task-field full"><label for="task-acceptance-input">验收标准</label><textarea id="task-acceptance-input" rows="2" placeholder="例如：图像文件可打开，数据与输入一致，附核对记录" required></textarea></div>
+        <div class="task-field"><label for="task-codex-model">Codex模型</label><select id="task-codex-model" disabled><option value="">正在读取原生模型目录</option></select><span id="task-codex-model-verification" class="model-verified-badge" hidden>已实测</span></div>
+        <div class="task-field"><label for="task-dsh-model">DSH模型</label><select id="task-dsh-model" disabled><option value="">正在读取原生模型目录</option></select><span id="task-dsh-model-verification" class="model-verified-badge" hidden>已实测</span></div>
+        <div class="task-field"><label for="task-timeout-input">运行时限（秒）</label><input id="task-timeout-input" type="number" min="1" step="1" value="300" required></div>
+        <div class="task-field"><label for="task-tools-input">工具调用预算</label><input id="task-tools-input" type="number" min="1" step="1" value="20" required><small>这是执行工具次数，不代表底层API调用或token上限。</small></div>
+        <div class="task-field full task-permissions"><label><input id="task-network-input" type="checkbox" disabled>允许联网检索</label><label><input id="task-image-input" type="checkbox" disabled>允许生成图片</label><label><input id="task-apps-input" type="checkbox" disabled>允许使用已连接应用</label><small>已连接应用需先开启联网；关闭联网会清除该授权。能力目录不代表每个调用已在线验证，不会自动升级模型。</small></div>
+        <div class="task-field full task-permissions task-file-permissions"><label><input id="task-overwrite-input" type="checkbox">允许覆盖交付目录中的已有同名文件</label><label><input id="task-office-input" type="checkbox">允许本任务范围内的Word/PowerPoint文档编辑</label><small>以上选项默认关闭。Word文档和用户手工制作的PowerPoint文稿需勾选后才授权编辑。范围仅限本任务明确指定的位置，不授权迁移文件。</small></div>
+      </div>
+      <details class="task-capability-details"><summary>查看两侧能力目录</summary><div id="task-capabilities"></div></details>
+      <div class="task-publish-scope"><strong>本次提交范围</strong><pre id="task-form-summary"></pre></div>
+      <div id="task-form-feedback" class="task-form-feedback" role="status"></div>
+      <div class="dialog-actions"><button type="button" class="quiet-button" id="close-task-dialog">关闭</button><button type="button" class="quiet-button" id="save-task-draft">保存草稿</button><button type="button" class="primary-button" id="publish-task">发布并执行</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

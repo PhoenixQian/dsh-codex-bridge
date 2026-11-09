@@ -1,0 +1,33 @@
+import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
+import { join } from 'node:path';
+import { createHash, randomUUID } from 'node:crypto';
+const canonical = value => JSON.stringify(value && typeof value === 'object' ? (Array.isArray(value) ? value.map(x=>JSON.parse(canonical(x))) : Object.fromEntries(Object.keys(value).sort().filter(k=>value[k]!==undefined).map(k=>[k,JSON.parse(canonical(value[k]))]))) : value);
+const redact = text => String(text).replace(/\bBearer\s+[\w.+/=-]+/gi,'Bearer [redacted]').replace(/\bsk-(?:proj-)?[\w-]{12,}/g,'[redacted]');
+function safeResult(p) { return {ok:p.ok!==false,...(p.code?{code:redact(p.code)}:{}),...(typeof p.text==='string'?{text:redact(p.text)}:{}),...(typeof p.threadId==='string'?{threadId:p.threadId}:{}),...(p.provenance?{provenance:Object.fromEntries(['kind','sessionId','seq','inputType','messageId'].filter(k=>['string','number'].includes(typeof p.provenance[k])).map(k=>[k,typeof p.provenance[k]==='string'?redact(p.provenance[k]):p.provenance[k]]))}:{}),...(typeof p.memoryCapability==='string'?{memoryCapability:p.memoryCapability}:{})}; }
+const error = code => Object.assign(new Error(code), {code});
+export class HostChannel {
+  constructor({directory, onEvent} = {}) { this.directory = directory; this.onEvent = onEvent; this.pending = new Map(); this.audit = []; this.host = null; this.closed = false; this.saving = Promise.resolve(); }
+  async init() { await mkdir(this.directory, {recursive:true}); this.path = join(this.directory,'host-discussions-state.json'); try { const old = JSON.parse(await readFile(this.path,'utf8')); this.audit = (old.audit ?? []).map(x => x.status === 'pending' ? {...x,status:'interrupted'} : x); } catch(e) { if(e.code !== 'ENOENT') throw e; } await this.save(); return this; }
+  save() { const data = JSON.stringify({audit:this.audit}); return this.saving = this.saving.catch(()=>{}).then(async()=>{await writeFile(this.path+'.tmp',data,{mode:0o600});await rename(this.path+'.tmp',this.path);}); }
+  status() { const online = !this.closed && !!this.host && Date.now()-this.host.at < 15000; return {online,canRespond:online && this.host.capabilities?.canRespond === true,hostId:online?this.host.hostId:null,capabilities:online?this.host.capabilities:{}}; }
+  heartbeat({hostId,capabilities}={}) { if(typeof hostId !== 'string' || !hostId || !capabilities || typeof capabilities !== 'object') throw error('INVALID_HOST'); if(this.host && this.host.hostId!==hostId && this.status().online) throw error('HOST_CONFLICT'); this.host={hostId,capabilities:{canRespond:capabilities.canRespond === true,memoryCapability:capabilities.memoryCapability??'unavailable',tools:Array.isArray(capabilities.tools)?capabilities.tools.filter(x=>x==='tongzhou_group_history'||/^mnemon_(recall|related|document_search|read)$/.test(x)):[]},at:Date.now()}; return this.status(); }
+  poll(hostId) { if(!this.status().online || this.host.hostId!==hostId) return []; return [...this.pending.values()].filter(x=>x.request.hostId===hostId).map(x=>{x.delivered=true;return x.request;}); }
+  async complete(id,payload={}) {
+    const p=this.pending.get(id), record=p?.record??this.audit.find(x=>x.requestId===id);
+    if(!record && !p)throw error('UNKNOWN_REQUEST');
+    const request=p?.request??record;
+    if(payload.hostId!==request.hostId)throw error('HOST_MISMATCH');
+    if(payload.requestId!==id || payload.fingerprint!==request.fingerprint)throw error('REQUEST_MISMATCH');
+    if(request.kind==='run' && payload.ok!==false && (typeof payload.text!=='string'||!payload.provenance?.sessionId||!Number.isInteger(payload.provenance?.seq)))throw error('INVALID_NATIVE_REPLY');
+    const digest=createHash('sha256').update(canonical(payload)).digest('hex');
+    if(record.resultDigest){if(record.resultDigest!==digest)throw error('RESULT_CONFLICT');await this.saving;return {accepted:true,duplicate:true,late:!!record.lateResult};}
+    record.resultDigest=digest;
+    if(!p){record.lateReply=true;record.lateResult=safeResult(payload);await this.save();try{this.onEvent?.({type:'late-result',requestId:id,laneId:record.laneId,conversationId:record.conversationId,callId:record.callId,messageId:record.messageId,authorId:record.authorId,result:record.lateResult});}catch{}return {accepted:true,late:true};}
+    this.finish(id,payload.ok===false?error(payload.code??'HOST_FAILED'):null,payload);await this.saving;return {accepted:true};
+  }
+  finish(id,e,value) { const p=this.pending.get(id);if(!p)return;this.pending.delete(id);clearTimeout(p.timer);p.cleanup();p.record.status=e?e.code:'completed';this.save();try{this.onEvent?.({type:'host-discussion',requestId:id,status:p.record.status,laneId:p.request.laneId});}catch{} e?p.reject(e):p.resolve(value); }
+  async dispatch(kind,{laneId,model,effort,signal,timeoutMs=kind==='prepare'?10000:300000,...input}) { if(!this.status().canRespond) throw error('HOST_UNAVAILABLE'); if(signal?.aborted)throw error('CANCELLED'); if(![laneId,model,effort].every(x=>typeof x==='string'&&x))throw error('INVALID_LANE');const requestId=randomUUID(),fingerprint=createHash('sha256').update(JSON.stringify({laneId,model,effort})).digest('hex'); const request={kind,requestId,fingerprint,laneId,model,effort,hostId:this.host.hostId,deadline:Date.now()+timeoutMs,...input};const record={requestId,fingerprint,laneId,model,effort,hostId:request.hostId,kind,conversationId:input.conversationId,callId:input.callId,messageId:input.messageId,authorId:input.authorId,status:'pending',at:Date.now()};this.audit.push(record);await this.save();return new Promise((resolve,reject)=>{const abort=()=>{const p=this.pending.get(requestId);if(p){this.cancels??=[];const cancel={...request,kind:'cancel',requestId:randomUUID(),targetRequestId:requestId};const cancelRecord={requestId:cancel.requestId,hostId:cancel.hostId,fingerprint:cancel.fingerprint,laneId:cancel.laneId,kind:'cancel',status:'pending',at:Date.now()};this.audit.push(cancelRecord);this.pending.set(cancel.requestId,{request:cancel,delivered:false,resolve:()=>{},reject:()=>{},cleanup:()=>{},record:cancelRecord,timer:setTimeout(()=>this.pending.delete(cancel.requestId),15000)});}this.finish(requestId,error(signal?.aborted?'CANCELLED':'TIMEOUT'));};const timer=setTimeout(abort,timeoutMs);signal?.addEventListener('abort',abort,{once:true});this.pending.set(requestId,{request,record,resolve,reject,timer,cleanup:()=>signal?.removeEventListener('abort',abort)});if(signal?.aborted)abort();}); }
+  prepare(options){return this.dispatch('prepare',options);}
+  run(options){return this.dispatch('run',options);}
+  async close(){this.closed=true;for(const id of [...this.pending.keys()])this.finish(id,error('INTERRUPTED'));await this.saving;}
+}
