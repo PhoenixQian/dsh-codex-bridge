@@ -42,6 +42,7 @@ jobs:
           import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
           import {execFileSync} from 'node:child_process';
           import {createHash} from 'node:crypto';
+          import {gunzipSync} from 'node:zlib';
           import {join} from 'node:path';
           const directory = join(process.env.RUNNER_TEMP, 'tongzhou-release');
           mkdirSync(directory, {recursive: true});
@@ -50,10 +51,16 @@ jobs:
           for (const file of packed.files) {
             if (!/^(?:lib\/|client\/|server\/|skills\/|package\.json$|cordis\.patch\.yml$|README(?:\.en)?\.md$|CHANGELOG\.md$|LICENSE$)/.test(file.path)) throw Error('Unexpected package file: ' + file.path);
           }
-          const sha = createHash('sha256').update(readFileSync(join(directory, packed.filename))).digest('hex');
-          if (sha !== '886933844f7bc3a22ea26fca17bb7c2e031cab4584c583f08563f5f0ce2ab2ff') throw Error('Artifact differs from the verified local package: ' + sha);
+          const archive = readFileSync(join(directory, packed.filename));
+          const sha = createHash('sha256').update(archive).digest('hex');
+          const tarSha = createHash('sha256').update(gunzipSync(archive)).digest('hex');
+          console.log(JSON.stringify({filename:packed.filename, size:packed.size, files:packed.files.length, sha256:sha, tarSha256:tarSha, zlib:process.versions.zlib}));
+          // Homebrew and official Linux Node builds link different zlib versions.
+          // Require the entire decompressed tar stream to match the local verified
+          // artifact, including every file byte and tar metadata, before publishing.
+          if (tarSha !== 'de90803e1440b353fa12ac4d303fe559a036534f4b182ab9cbb4077885c1e011') throw Error('Package content differs from the verified local artifact');
+          if (sha !== '3da3dbe6f4e003cca4bcb560dad7efc40c8b541f50a961f2d4c9e8a1c63046a5') throw Error('Unexpected Linux compression output');
           writeFileSync(join(directory, 'SHA256SUMS'), `${sha}  ${packed.filename}\n`);
-          console.log(JSON.stringify({filename:packed.filename, size:packed.size, files:packed.files.length, sha256:sha}));
           NODE
       - name: Publish the verified release
         env:
