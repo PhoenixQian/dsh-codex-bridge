@@ -13,7 +13,7 @@ test('clean package serves complete UI without Codex; setup requires same origin
   const get=async path=>(await fetch(hub.url+path)).json();
   const health=await get('/api/health');
   assert.equal(health.app,'codex-dsh-bridge'); assert.equal(health.dataDir,directory);
-  assert.equal(health.buildId,'tongzhou-community-0.3.0');
+  assert.equal(health.buildId,'tongzhou-community-0.3.1');
   const html=await (await fetch(hub.url)).text();
   assert.match(html,/接入本机 Codex/);assert.match(html,/\/setup.js/);
   for (const path of ['/setup.js','/app.js','/style.css','/tasks.js','/reading','/reading.js','/reading-format.js','/reading.css']) assert.equal((await fetch(hub.url+path)).status,200,path);

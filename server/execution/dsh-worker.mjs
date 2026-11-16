@@ -7,7 +7,7 @@ import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ActiveTimeBudget } from '../codex-peer.mjs';
-import { resolveDshExecutable, dshResources } from '../runtime-config.mjs';
+import { resolveDshExecutable, dshResources, dshRuntimeDiagnostic, SUPPORTED_DSH_VERSIONS } from '../runtime-config.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PREFIX = 'DSH_TASK ';
@@ -42,6 +42,13 @@ async function metadata({ desktopProfilePath = join(process.env.DSH_HOME || join
     child.once('error', error => { clearTimeout(timer); reject(error); });
     child.once('exit', code => {
       clearTimeout(timer);
+      const diagnosticLine = output.split('\n').find(line => line.startsWith('DSH_METADATA_ERROR '));
+      if (diagnosticLine) {
+        try {
+          const diagnostic = dshRuntimeDiagnostic(JSON.parse(diagnosticLine.slice('DSH_METADATA_ERROR '.length)));
+          return reject(Object.assign(fail(diagnostic.code, diagnostic.message), diagnostic));
+        } catch { return reject(fail('METADATA_PROTOCOL', 'DSH metadata helper returned an invalid diagnostic.')); }
+      }
       if (code !== 0) return reject(fail('METADATA_FAILED', 'DSH provider metadata inspection failed.'));
       try { const line = output.split('\n').find(x => x.startsWith('DSH_METADATA ')); resolve(JSON.parse(line.slice(13))); }
       catch { reject(fail('METADATA_PROTOCOL', 'DSH metadata helper returned no valid metadata.')); }
@@ -49,8 +56,15 @@ async function metadata({ desktopProfilePath = join(process.env.DSH_HOME || join
   });
 }
 export async function getDshCapabilities(options = {}) {
-  const info = await metadata(options);
-  return { ...dshCapabilitiesFromMetadata(info), discoveredAt: new Date().toISOString() };
+  try {
+    const info = await metadata(options);
+    return { ...dshCapabilitiesFromMetadata(info), discoveredAt: new Date().toISOString() };
+  } catch (error) {
+    const diagnostic = dshRuntimeDiagnostic(error);
+    return {models:[], error:diagnostic.message, errorCode:diagnostic.code, runtimeVersion:diagnostic.runtimeVersion,
+      supportedRuntimeVersions:diagnostic.supportedRuntimeVersions, authentication:'not-checked', verified:false,
+      discoveredAt:new Date().toISOString()};
+  }
 }
 
 /** Provider catalog metadata is not evidence of available task credentials. */
@@ -69,7 +83,7 @@ export function dshCapabilitiesFromMetadata(info = {}) {
       })),
     ],
     providerCapabilities: { controlledTools: true, imageGeneration: false, webSearch: false, connectedApps: false },
-    imageGeneration: false, network: false, authentication: 'not-checked', verified: false, runtimeVersion: info.runtimeVersion,
+    imageGeneration: false, network: false, authentication: 'not-checked', verified: false, runtimeVersion: info.runtimeVersion, supportedRuntimeVersions:[...SUPPORTED_DSH_VERSIONS],
   };
 }
 

@@ -5,7 +5,7 @@ window.__ModuleLoader__.load({
     const PAGE_URL = 'http://127.0.0.1:32719/';
     const ORIGIN = 'http://127.0.0.1:32719';
     const PANEL_ID = 'codex-dsh-bridge';
-    const BUILD_ID = 'tongzhou-community-0.3.0';
+    const BUILD_ID = 'tongzhou-community-0.3.1';
     const READING_VIEW_ID = 'tongzhou-reading';
     const h = React.createElement;
     let identityRequest;

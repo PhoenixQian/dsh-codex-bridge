@@ -34,7 +34,7 @@ test('one click installs exactly the skill plus receipt; repeated clicks preserv
   assert.equal(await readFile(join(f.target,'SKILL.md'),'utf8'),'Portable skill');
   assert.deepEqual((await readdir(join(f.home,'.agents'))),['skills']);
   const receipt=await readFile(join(f.target,'.tongzhou-install.json'),'utf8');
-  assert.equal(JSON.parse(receipt).version,'0.3.0');
+  assert.equal(JSON.parse(receipt).version,'0.3.1');
   await f.setup.install(); assert.equal(await readFile(join(f.target,'.tongzhou-install.json'),'utf8'),receipt);
 });
 test('an existing different skill is preserved byte for byte', async t => {

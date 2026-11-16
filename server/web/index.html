@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>同舟｜讨论与任务</title>
-  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/tasks.js" defer></script><script src="/setup.js" defer></script>
+  <link rel="stylesheet" href="/style.css"><script src="/capability-status.js" defer></script><script src="/app.js" defer></script><script src="/tasks.js" defer></script><script src="/setup.js" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -75,7 +75,7 @@
       <footer class="review-panel"><div class="review-compose"><textarea id="task-message-input" rows="2" placeholder="继续提出要求；本轮结束后仍可在同一任务续聊。"></textarea><button id="task-template" class="quiet-button">任务模板</button><button id="send-task-message" class="primary-button" disabled>发送</button></div></footer><div class="task-feedback" id="task-feedback" role="status"></div>
     </main>
   </div>
-  <dialog id="new-dialog"><form id="new-form"><h2>新建一个讨论议题</h2><p>先建立记录，点击开始讨论后才调用Agent。</p><label>主Agent<select id="discussion-lead-agent"><option value="Codex">Codex</option><option value="DSH">DSH</option></select></label><label>往返名额<input id="discussion-limit" type="number" min="100" value="100"></label><label>Codex模型<select id="discussion-codex-model" disabled></select></label><label>思考程度<select id="discussion-codex-effort" disabled></select></label><label>DSH模型<select id="discussion-dsh-model" disabled></select></label><label>思考程度<select id="discussion-dsh-effort" disabled></select></label><input id="new-title" maxlength="120" placeholder="例如：方案的交叉审阅" required><div class="dialog-actions"><button type="button" class="quiet-button" id="cancel-new">取消</button><button type="submit" class="primary-button">建立议题</button></div></form></dialog>
+  <dialog id="new-dialog"><form id="new-form"><h2>新建一个讨论议题</h2><p>先建立记录，点击开始讨论后才调用Agent。</p><p id="discussion-capability-feedback" class="notice" role="status" hidden></p><label>主Agent<select id="discussion-lead-agent"><option value="Codex">Codex</option><option value="DSH">DSH</option></select></label><label>往返名额<input id="discussion-limit" type="number" min="100" value="100"></label><label>Codex模型<select id="discussion-codex-model" disabled></select></label><label>思考程度<select id="discussion-codex-effort" disabled></select></label><label>DSH模型<select id="discussion-dsh-model" disabled></select></label><label>思考程度<select id="discussion-dsh-effort" disabled></select></label><input id="new-title" maxlength="120" placeholder="例如：方案的交叉审阅" required><div class="dialog-actions"><button type="button" class="quiet-button" id="cancel-new">取消</button><button type="submit" class="primary-button">建立议题</button></div></form></dialog>
   <dialog id="task-dialog" class="task-dialog">
     <form id="task-form">
       <h2>发布一项任务</h2><p>保存草稿不会启动模型。点击“发布并执行”授权两侧在以下范围内完成常规任务操作，输出默认进入专用任务目录。</p>

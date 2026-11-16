@@ -75,13 +75,46 @@ export async function importDshModule(packageName, {resourcesPath, subpath = 'li
   const resources = dshResources({resourcesPath});
   return import(pathToFileURL(join(resources, 'app.asar/dsh/node_modules', packageName, subpath)).href);
 }
-export async function assertSupportedDsh() {
+export const SUPPORTED_DSH_VERSIONS = Object.freeze(['0.2.2-rc.1', '0.2.2-rc.3']);
+function publicRuntimeVersion(value) {
+  return typeof value === 'string' && value.length <= 64 && /^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(value) ? value : null;
+}
+/** Fixed diagnostics cross the child boundary without copying config or errors. */
+export function dshRuntimeDiagnostic(error = {}) {
+  const messages = {
+    UNSUPPORTED_DSH_VERSION: null,
+    UNSUPPORTED_PLATFORM: '社区版原生 DSH 执行目前仅支持 macOS。',
+    DSH_PLATFORM_UNSUPPORTED: '社区版原生 DSH 执行目前仅支持 macOS。',
+    DSH_RUNTIME_UNAVAILABLE: '无法读取 DSH Desktop 运行时；请检查安装路径，并使用其 Electron Node 载体读取宿主模块。',
+    DSH_PROFILE_UNAVAILABLE: '未发现 DSH Desktop profile；请先打开并配置本机 DSH Desktop。',
+    SETTINGS_INVALID: '同舟连接配置无效，请重新接入。',
+    METADATA_TIMEOUT: 'DSH 模型目录检查超时；未启动模型。',
+    METADATA_PROTOCOL: 'DSH 模型目录检查未返回有效结果；未启动模型。',
+    METADATA_FAILED: 'DSH 模型目录检查失败；请检查运行时及 Desktop profile。',
+    DSH_METADATA_INVALID: 'DSH 模型目录无效或宿主接口不兼容；未启动模型。',
+    DSH_STARTUP_FAILED: 'DSH 原生任务启动失败；请检查受支持的运行时和任务 profile。',
+  };
+  const code = Object.hasOwn(messages, error?.code) ? error.code : 'DSH_METADATA_INVALID';
+  const runtimeVersion = publicRuntimeVersion(error?.runtimeVersion);
+  const supportedRuntimeVersions = [...SUPPORTED_DSH_VERSIONS];
+  const message = code === 'UNSUPPORTED_DSH_VERSION'
+    ? `检测到 DSH Desktop ${runtimeVersion ?? '版本未知'}；同舟仅验证了 ${supportedRuntimeVersions.join('、')}，此版本尚未验证。`
+    : messages[code];
+  return {code, message, runtimeVersion, supportedRuntimeVersions};
+}
+/** Pure allowlist: an untested prerelease or stable release is not implied. */
+export function assertSupportedDshVersion(version) {
+  if (SUPPORTED_DSH_VERSIONS.includes(version)) return {version};
+  const diagnostic = dshRuntimeDiagnostic({code:'UNSUPPORTED_DSH_VERSION', runtimeVersion:version});
+  throw Object.assign(failure(diagnostic.code, diagnostic.message), diagnostic);
+}
+export async function assertSupportedDsh({resourcesPath, env = process.env} = {}) {
   if (process.platform !== 'darwin') throw failure('UNSUPPORTED_PLATFORM', '社区版原生 DSH 执行目前仅支持 macOS。');
+  const resources = dshResources({resourcesPath, env});
   let metadata;
-  try { metadata = JSON.parse(readFileSync(join(dshResources(), 'app.asar/dsh/node_modules/@deepseek-ai/dsh/package.json'), 'utf8')); }
+  try { metadata = JSON.parse(readFileSync(join(resources, 'app.asar/dsh/node_modules/@deepseek-ai/dsh/package.json'), 'utf8')); }
   catch { throw failure('DSH_RUNTIME_UNAVAILABLE', '需要使用 DSH Desktop 的 Electron Node 载体读取宿主模块。'); }
-  if (metadata.version !== '0.2.2-rc.1') throw failure('UNSUPPORTED_DSH_VERSION', '社区版当前验证的 DSH Desktop 版本为 0.2.2-rc.1；此版本尚未验证。');
-  return {version:metadata.version};
+  return assertSupportedDshVersion(metadata?.version);
 }
 export function getPythonConfig({agent = 'Codex', env = process.env} = {}) {
   const suffix = agent === 'DSH' ? 'DSH' : 'CODEX'; const settings = settingsFor(env);

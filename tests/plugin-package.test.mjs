@@ -36,7 +36,7 @@ test('distribution contains every relative runtime module and no private state',
 test('package declares a DSH bundle and does not run installation scripts', async () => {
   const pkg = JSON.parse(await readFile(join(root,'package.json'),'utf8'));
   assert.equal(pkg.name,'dsh-codex-bridge');
-  assert.equal(pkg.version,'0.3.0');
+  assert.equal(pkg.version,'0.3.1');
   assert.equal(pkg.dsh.bundle.patch,'./cordis.patch.yml');
   assert.equal(pkg.exports['./client'],'./client/client.js');
   for (const hook of ['preinstall','install','postinstall','prepare']) assert.equal(pkg.scripts?.[hook],undefined);
@@ -95,7 +95,7 @@ test('Host wrapper uses actual caller identity and writes only to its data direc
 });
 
 const EXPECTED_INSTANCE = 'a'.repeat(64);
-async function browserClient({identityResult={ok:true,value:{buildId:'tongzhou-community-0.3.0',instanceId:EXPECTED_INSTANCE}}}={}) {
+async function browserClient({identityResult={ok:true,value:{buildId:'tongzhou-community-0.3.1',instanceId:EXPECTED_INSTANCE}}}={}) {
   const {default:vm}=await import('node:vm');
   const entries=new Map(), listeners=new Set(), hooks=[], pending=[], timers=new Set(), timeouts=new Set(), identityCalls=[];
   let plugin, index=0, now=0;
@@ -133,7 +133,7 @@ test('client hides an occupied older service until the expected build replies', 
     assert.equal(element(c.render(panel),'iframe').props.style.visibility,'hidden');
     c.send({...event,data:{...event.data,buildId:'some-other-installation'}});
     assert.equal(element(c.render(panel),'iframe').props.style.visibility,'hidden');
-    const expected={...event,data:{...event.data,buildId:'tongzhou-community-0.3.0',instanceId:EXPECTED_INSTANCE}};
+    const expected={...event,data:{...event.data,buildId:'tongzhou-community-0.3.1',instanceId:EXPECTED_INSTANCE}};
     c.send({...expected,data:{...expected.data,instanceId:'b'.repeat(64)}});
     assert.equal(element(c.render(panel),'iframe').props.style.visibility,'hidden');
     c.send({...expected,source:{}});
@@ -157,9 +157,9 @@ test('native reading probe rejects old-service ownership before changing native 
     const event={origin:'http://127.0.0.1:32719',source,data:{type:'agent-bridge:reading-ready',sessionId:'native-demo',source:'shared-discussion'}};
     c.send(event);
     assert.deepEqual(selected,[]);
-    c.send({...event,data:{...event.data,buildId:'tongzhou-community-0.3.0',instanceId:'b'.repeat(64)}});
+    c.send({...event,data:{...event.data,buildId:'tongzhou-community-0.3.1',instanceId:'b'.repeat(64)}});
     assert.deepEqual(selected,[]);
-    c.send({...event,data:{...event.data,buildId:'tongzhou-community-0.3.0',instanceId:EXPECTED_INSTANCE}});
+    c.send({...event,data:{...event.data,buildId:'tongzhou-community-0.3.1',instanceId:EXPECTED_INSTANCE}});
     assert.deepEqual(selected,['tongzhou-reading']);
   } finally {c.dispose();}
 });
@@ -185,7 +185,7 @@ test('DSH identity route returns only the Host fingerprint and ignores no caller
   const request=body=>new Request('http://dsh.test'+route.path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   const response=await route.fetch(request(envelope)),data=await response.json();
   assert.equal(response.status,200);
-  assert.deepEqual(data,{type:'server-response',rpcId:'test-request',result:{ok:true,value:{buildId:'tongzhou-community-0.3.0',instanceId:instanceFingerprint()}}});
+  assert.deepEqual(data,{type:'server-response',rpcId:'test-request',result:{ok:true,value:{buildId:'tongzhou-community-0.3.1',instanceId:instanceFingerprint()}}});
   const injected=await route.fetch(request({...envelope,payload:{directory:'/tmp/other-instance',instanceId:'b'.repeat(64)}}));
   assert.equal(injected.status,400);
   assert.notEqual(instanceFingerprint({directory:'/tmp/first'}),instanceFingerprint({directory:'/tmp/second'}));

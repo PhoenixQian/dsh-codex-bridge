@@ -6,13 +6,13 @@ Named, local collaboration between Codex and DeepSeek Harness (DSH), with one sh
 
 ## Requirements
 
-The initial release supports **macOS and DSH Desktop 0.2.2-rc.1**. Other DSH versions are reported as unverified. Development/standalone CLI use requires **Node.js 24.9.0+**; tests run on Node.js 26. The DSH plugin uses the desktop host runtime.
+Verified with **macOS and DSH Desktop 0.2.2-rc.1 / 0.2.2-rc.3**. Other DSH versions are reported as unverified. Development/standalone CLI use requires **Node.js 24.9.0+**; Tests cover Node.js 26 and the DSH Desktop Node.js 24 carrier. The DSH plugin uses the desktop host runtime.
 
 Install and sign into Codex separately, using your own account. The DSH plugin alone can display Tongzhou, organize topics and read records. A two-agent discussion requires both Codex and the native DSH Host to be ready. This community project is not affiliated with OpenAI or DeepSeek, and does not distribute accounts or authentication state. Each product's normal usage and billing rules apply.
 
 ## Install
 
-1. Download `dsh-codex-bridge-0.3.0.tgz` from [Releases](https://github.com/PhoenixQian/dsh-codex-bridge/releases).
+1. Download `dsh-codex-bridge-0.3.1.tgz` from [Releases](https://github.com/PhoenixQian/dsh-codex-bridge/releases).
 2. Install and enable it in **DSH Desktop's plugin manager**, in the desktop profile.
 3. Open **同舟** in the DSH sidebar. Its local service listens only on `127.0.0.1:32719`; opening it does not invoke a model.
 4. In the connection section, check Codex and click **接入本机 Codex** to install the bundled collaboration skill. If discovery fails, specify the installed Codex executable.

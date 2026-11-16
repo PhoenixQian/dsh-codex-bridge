@@ -6,7 +6,7 @@
 
 ## 首版支持
 
-- macOS，DSH Desktop **0.2.2-rc.1**；目前对其他 DSH 版本明确报出未验证状态。
+- macOS，DSH Desktop **0.2.2-rc.1 / 0.2.2-rc.3**；目前对其他 DSH 版本明确报出未验证状态。
 - 本机 Codex CLI 或带 Codex CLI 的桌面应用，已使用用户自己的账号登录。未接入 Codex 时可以打开同舟、整理议题和阅读记录；双 Agent 讨论需要两端都就绪。
 - 开发/命令行运行需要 Node.js **24.9.0 或更新版本**；测试环境为 Node.js 26。DSH Desktop 加载插件时使用其宿主运行时。
 
@@ -14,7 +14,7 @@
 
 ## 安装
 
-1. 从本仓库 [Releases](https://github.com/PhoenixQian/dsh-codex-bridge/releases) 下载 `dsh-codex-bridge-0.3.0.tgz`。
+1. 从本仓库 [Releases](https://github.com/PhoenixQian/dsh-codex-bridge/releases) 下载 `dsh-codex-bridge-0.3.1.tgz`。
 2. 在 **DSH Desktop 的插件管理器**中安装该包并启用。安装到桌面 profile；Web profile 不会出现在桌面侧栏。
 3. 打开 DSH 侧栏的【同舟】。插件会启动只监听 `127.0.0.1:32719` 的本机服务，不会因此发起模型调用。
 4. 点击侧栏【接入本机 Codex】检查状态，再点【一键接入 Codex】安装协作技能。Codex 需要事先安装并登录；如果自动发现失败，可指定本机可执行文件路径。
@@ -40,7 +40,7 @@
 
 代码与用户数据分离。默认数据目录为 `~/.dsh/tongzhou/`；若设置 `DSH_HOME`，则为 `$DSH_HOME/tongzhou/`，也可用 `TONGZHOU_DATA_DIR` 指定。
 
-原生压缩日志的补充阅读需要支持拼接 Zstd 帧的运行时；宿主不支持时会明确提示，同舟共享正文仍可阅读。
+原生压缩日志按完整结构逐帧读取，兼容 DSH Desktop 的 Node 24 和独立 Node 26 运行时；损坏或超出限额的日志会明确报错。
 
 讨论、会话映射和交付状态保存在本机；模型请求仍发送给用户已配置的 Codex / DSH 服务。安装包不包含作者的讨论记录、密钥、会话、日志或个人路径。插件不读取或复制 `auth.json`，也不接收用户在聊天中粘贴密钥。Codex 登录状态通过其原生命令查询。
 

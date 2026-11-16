@@ -1,14 +1,15 @@
 // This helper only parses configuration metadata. It never boots DSH plugins.
 import { readFileSync } from 'node:fs';
-import { importDshModule, assertSupportedDsh } from '../runtime-config.mjs';
+import { importDshModule, assertSupportedDsh, dshRuntimeDiagnostic } from '../runtime-config.mjs';
 const fields = ['id', 'name', 'api', 'contextWindow', 'maxTokens', 'input', 'reasoningEfforts'];
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const pickModel = value => {
   if (!plain(value) || typeof value.id !== 'string' || !value.id || /[\0\r\n]/.test(value.id)) return null;
   return Object.fromEntries(fields.filter(key => value[key] !== undefined && value[key]?.expression !== true).map(key => [key, value[key]]));
 };
+let runtime;
 try {
-  const runtime = await assertSupportedDsh();
+  runtime = await assertSupportedDsh();
   const [{ DeepSeekAdapter, resolveAdapterOptions }, yamlModule] = await Promise.all([
     importDshModule('@deepseek-ai/dsh-llm-deepseek'),
     importDshModule('yaml', { subpath: 'dist/index.js' }),
@@ -40,6 +41,6 @@ try {
   const account = await adapter.resolveModel('deepseek-account', 'deepseek-flash');
   process.stdout.write('DSH_METADATA ' + JSON.stringify({ providers, accountReasoning: account.reasoning, reasoningSource: '@deepseek-ai/dsh-llm-deepseek:DeepSeekAdapter.resolveModel', runtimeVersion: runtime.version }) + '\n');
 } catch (error) {
-  process.stderr.write('DSH metadata inspection failed; the supported DSH Desktop runtime and profile are required.\n');
+  process.stdout.write('DSH_METADATA_ERROR ' + JSON.stringify(dshRuntimeDiagnostic({code:error?.code, runtimeVersion:error?.runtimeVersion ?? runtime?.version})) + '\n');
   process.exitCode = 1;
 }

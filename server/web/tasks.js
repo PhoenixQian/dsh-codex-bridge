@@ -211,14 +211,16 @@
     select.value = values.includes(previous) ? previous : model ? 'default' : ''; select.disabled = !model;
   }
   async function loadCapabilities() {
-    if (data.capabilities || data.loadingCapabilities) return;
+    if (data.loadingCapabilities || (data.capabilities && !['Codex','DSH'].some(agent => data.capabilities[agent]?.error))) return;
     data.loadingCapabilities = true;
     try {
       data.capabilities = await request('/api/capabilities');
       fillModels('Codex', 'task-codex-model'); fillModels('DSH', 'task-dsh-model');
       node('task-network-input').disabled = ![data.capabilities.Codex, data.capabilities.DSH].some(agent => agent?.webSearch === true);
       node('task-image-input').disabled = ![data.capabilities.Codex, data.capabilities.DSH].some(agent => agent?.imageGeneration === true);
-      fields('task-capabilities', ['Codex', 'DSH'].map(agent => [agent, `${data.capabilities[agent]?.models?.filter(model => model.taskExecution !== false && model.availability !== 'host-only').length || 0}个可选模型 · 联网检索${data.capabilities[agent]?.webSearch === true ? '可用' : '未提供'} · 生图${data.capabilities[agent]?.imageGeneration === true ? '可用' : '未提供'}`]));
+      const problems = ['Codex','DSH'].map(agent => globalThis.TongzhouCapabilities?.problem(agent,data.capabilities[agent]) || '').filter(Boolean);
+      node('task-form-feedback').textContent = problems.join(' ');
+      fields('task-capabilities', ['Codex', 'DSH'].map(agent => [agent, globalThis.TongzhouCapabilities?.problem(agent,data.capabilities[agent]) || `${data.capabilities[agent]?.models?.filter(model => model.taskExecution !== false && model.availability !== 'host-only').length || 0}个可选模型 · 联网检索${data.capabilities[agent]?.webSearch === true ? '可用' : '未提供'} · 生图${data.capabilities[agent]?.imageGeneration === true ? '可用' : '未提供'}`]));
       updateFormSummary();
     } catch (error) { node('task-form-feedback').textContent = '能力目录读取失败：' + error.message; }
     finally { data.loadingCapabilities = false; }

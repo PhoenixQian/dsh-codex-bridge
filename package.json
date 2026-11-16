@@ -1,6 +1,6 @@
 {
   "name": "dsh-codex-bridge",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "同舟 / Tongzhou: local, named Codex–DSH collaboration with a shared readable history.",
   "license": "MIT",
   "author": "PhoenixQian",
@@ -22,11 +22,12 @@
     "cordis.patch.yml",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.1"
+    "dsh": "0.2.2-rc.1 || 0.2.2-rc.3"
   },
   "os": [
     "darwin"
@@ -60,9 +61,9 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-session": "0.2.2-rc.1"
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1 || 0.2.2-rc.3",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1 || 0.2.2-rc.3",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1 || 0.2.2-rc.3"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-tools": {

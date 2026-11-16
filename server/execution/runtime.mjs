@@ -31,7 +31,7 @@ export class TaskRuntime {
   }
   get activeCount(){return this.jobs.size;}
   async capabilities(){
-    if(this.capabilitiesValue&&Date.now()-this.capabilitiesAt<300000)return this.decorateCapabilities(this.capabilitiesValue);
+    if(this.capabilitiesValue&&!['Codex','DSH'].some(agent=>this.capabilitiesValue[agent]?.error||this.capabilitiesValue[agent]?.errorCode)&&Date.now()-this.capabilitiesAt<300000)return this.decorateCapabilities(this.capabilitiesValue);
     if(this.capabilitiesPending)return this.decorateCapabilities(await this.capabilitiesPending);
     this.capabilitiesPending=(async()=>{
       if(this.capabilityLoader)return this.capabilityLoader();

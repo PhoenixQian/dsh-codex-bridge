@@ -81,7 +81,7 @@ export function createCommunitySetup({directory = DATA_ROOT, home = homedir(), s
           await mkdir(dirname(path), {recursive: true, mode: 0o700});
           await writeFile(path, file.bytes, {mode: 0o600, flag: 'wx'});
         }
-        await writeFile(join(temporary, '.tongzhou-install.json'), JSON.stringify({schema: 1, package: 'dsh-codex-bridge', version: '0.3.0', files: Object.fromEntries(source.map(file => [file.path, digest(file.bytes)]))}, null, 2) + '\n', {mode: 0o600, flag: 'wx'});
+        await writeFile(join(temporary, '.tongzhou-install.json'), JSON.stringify({schema: 1, package: 'dsh-codex-bridge', version: '0.3.1', files: Object.fromEntries(source.map(file => [file.path, digest(file.bytes)]))}, null, 2) + '\n', {mode: 0o600, flag: 'wx'});
         // Recheck before rename; never remove an existing destination.
         try { await lstat(target); throw issue('SKILL_CONFLICT', '接入期间目标目录已出现，本次未覆盖。', 409); } catch (error) { if (!missing(error)) throw error; }
         await rename(temporary, target);

@@ -225,9 +225,11 @@ function discussionEfforts(agent) {
   for(const value of values){const option=element('option','',value);option.value=value;select.append(option);}select.value=model ? 'default' : '';select.disabled=!model;
 }
 async function loadDiscussionModels() {
-  try{ discussionCapabilities ||= await api('/api/capabilities');
+  try{ if (!discussionCapabilities || ['Codex','DSH'].some(agent => discussionCapabilities[agent]?.error)) discussionCapabilities = await api('/api/capabilities');
+    const problems = ['Codex','DSH'].map(agent => globalThis.TongzhouCapabilities?.problem(agent,discussionCapabilities[agent]) || '').filter(Boolean);
+    $('discussion-capability-feedback').textContent = problems.join(' '); $('discussion-capability-feedback').hidden = !problems.length;
     for(const agent of ['Codex','DSH']) {const select=$(`discussion-${agent.toLowerCase()}-model`),models=discussionCapabilities[agent]?.models || [];select.replaceChildren(); const unset=element('option','','原生默认');unset.value='';select.append(unset);for(const model of models){const option=element('option','',model.displayName || model.id);option.value=model.id;select.append(option);}select.value=models.find(m=>m.default)?.id || '';select.disabled=!models.length;discussionEfforts(agent);}
-  }catch(error){feedback('模型目录不可用：'+error.message);}
+  }catch(error){const text='模型目录不可用：'+error.message; $('discussion-capability-feedback').textContent=text; $('discussion-capability-feedback').hidden=false; feedback(text);}
 }
 for(const agent of ['Codex','DSH']) $(`discussion-${agent.toLowerCase()}-model`).addEventListener('change',()=>discussionEfforts(agent));
 $('review-text').addEventListener('input',()=>{if(state.selected)state.drafts.set(state.selected,$('review-text').value);});
@@ -246,5 +248,5 @@ $('archive-conversation').addEventListener('click', async () => {const id=action
 $('more-conversations').addEventListener('click',()=>{state.limit+=10;refresh();});
 $('conversation-archived').addEventListener('change',()=>{state.archived=$('conversation-archived').checked;state.limit=10;refresh();});
 
-async function heartbeat() { if (window.parent === window) return; try { const health = await api('/api/health'); if (health.buildId === 'tongzhou-community-0.3.0' && /^[a-f0-9]{64}$/.test(health.instanceId)) window.parent.postMessage({type:'agent-bridge:ready',buildId:health.buildId,instanceId:health.instanceId},'*'); } catch {} }
+async function heartbeat() { if (window.parent === window) return; try { const health = await api('/api/health'); if (health.buildId === 'tongzhou-community-0.3.1' && /^[a-f0-9]{64}$/.test(health.instanceId)) window.parent.postMessage({type:'agent-bridge:ready',buildId:health.buildId,instanceId:health.instanceId},'*'); } catch {} }
 disableConversationActions(); heartbeat(); setInterval(heartbeat, 3000); refresh(); setInterval(refresh, 1500);
